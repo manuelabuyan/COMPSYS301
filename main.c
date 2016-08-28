@@ -28,7 +28,8 @@ void Test2();
 void Test3();
 void Test4();
 void Test5();
-void Test5();
+void Test6();
+void writeCompare(int P1, int P2);
 void usbPutString(char *s);
 void usbPutChar(char c);
 void handle_usb();
@@ -56,7 +57,7 @@ int main()
     ADC_StartConvert();
     
 
-// ------USB SETUP ----------------    
+// -----USB SETUP -----------------    
 #ifdef USE_USB    
     USBUART_Start(0,USBUART_5V_OPERATION);
 #endif        
@@ -64,46 +65,50 @@ int main()
     RF_BT_SELECT_Write(0);
 
     usbPutString(displaystring);
+//------RUN LOOP-------------------
     for(;;)
     {
+        
+        PWM_1_Start();
+        PWM_2_Start();
+        
+        
+        /*
 		//Get switch information
-		
+		sw1 = 
+		sw2 = 
+		sw3 = 
 		
 		
 		//Choose mode depending on switch position
 		
 		//Open loop-straight line test
-		if (sw1 = 0, sw2 = 0, sw3 = 1) //TEMP PSEUDO CODE
+		if (sw1 = 0 && sw2 = 0 && sw3 = 1) //TEMP PSEUDO CODE
 		{
 			Test1();
 		}
-		
 		//Straight line-with curve test
-		if (sw1 = 0, sw2 = 1, sw3 = 0) //TEMP PSEUDO CODE
+		else if (sw1 = 0 && sw2 = 1 && sw3 = 0) //TEMP PSEUDO CODE
 		{
 			Test2();
 		}
-		
 		//Curve tracking test
-		if (sw1 = 0, sw2 = 1, sw3 = 1) //TEMP PSEUDO CODE
+		else if (sw1 = 0 && sw2 = 1 && sw3 = 1) //TEMP PSEUDO CODE
 		{
 			Test3();
 		}
-		
 		//Turn 90degrees test
-		if (sw1 = 1, sw2 = 0, sw3 = 0) //TEMP PSEUDO CODE
+		else if (sw1 = 1 && sw2 = 0 && sw3 = 0) //TEMP PSEUDO CODE
 		{
 			Test4();
 		}
-		
 		//ADC Battery read test
-		if (sw1 = 1, sw2 = 0, sw3 = 1) //TEMP PSEUDO CODE
+		else if (sw1 = 1 && sw2 = 0 && sw3 = 1) //TEMP PSEUDO CODE
 		{
 			Test5();
 		}
-		
 		//RF recieve test
-		if (sw1 = 1, sw2 = 1, sw3 = 0) //TEMP PSEUDO CODE
+		else if (sw1 = 1 && sw2 = 1 && sw3 = 0) //TEMP PSEUDO CODE
 		{
 			//Test6();
 			handle_usb();
@@ -128,9 +133,10 @@ int main()
     }   
 }
 
-
+/*
 
 //* ========================================
+//Open loop-straight line test
 void Test1()
 {
 	Go straight
@@ -223,7 +229,10 @@ void Test4()
 	}
 	
 }
+
+*/
 //* ========================================
+//ADC Battery read test
 void Test5()
 {
 	int16 ADC_5VIN = ADC_GetResult16(6) / 0.85;
@@ -249,6 +258,13 @@ void Test6()
 }
 
 
+//* ========================================
+//Write compare values of PWMs
+void writeCompare(int P1, int P2)
+{
+    PWM_1_WriteCompare(P1);
+    PWM_2_WriteCompare(P2);
+}
 
 //* ========================================
 void usbPutString(char *s)
