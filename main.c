@@ -41,6 +41,22 @@ CY_ISR(isrRF_RX)
     USBUART_PutChar(c);
 }
 
+int isOnLight(int8 numSensor)
+{
+    int32 ADC;
+    int16 i;
+    for(i = 0; i < 58; i++)
+    {
+        while(!ADC_IsEndConversion(0)){}
+        ADC = ADC_CountsTo_mVolts(ADC_GetResult16(numSensor));
+        if(ADC > 1000)
+        {
+            return 1;
+        }
+    }
+    return 0;
+}
+
 int main()
 {
 
@@ -61,7 +77,6 @@ int main()
 #endif        
         
     RF_BT_SELECT_Write(0);
-
     usbPutString(displaystring);
     
     */
@@ -156,8 +171,12 @@ void Test1()
 //Straight line-with curve test
 void Test2()
 {
+    int8 tLSensor = isOnLight(0);
+	int8 tRSensor = isOnLight(1);
+    
+    
 	//Get sensor results
-	int16 ADC_S1 = ADC_GetResult16(0) / 0.85;
+	/*int16 ADC_S1 = ADC_GetResult16(0) / 0.85;
 	int16 ADC_S2 = ADC_GetResult16(1) / 0.85;
     int16 ADC_S5 = ADC_GetResult16(4) / 0.85;
 	
@@ -185,7 +204,7 @@ void Test2()
 	else{
         writeCompare(127,127);
 		CyDelay(100);
-	}
+	}*/
 
 }
 //* ========================================
@@ -222,22 +241,6 @@ void Test3()
 }
 //* ========================================
 //Turn 90degrees test
-int isOnLight(int8 numSensor)
-{
-    int32 ADC;
-    int16 i;
-    for(i = 0; i < 50; i++)
-    {
-        while(!ADC_IsEndConversion(0)){}
-        ADC = ADC_CountsTo_mVolts(ADC_GetResult16(numSensor));
-        if(ADC > 1000)
-        {
-            return 1;
-        }
-    }
-    return 0;
-}
-
 void Test4()
 {
     int8 tLSensor = isOnLight(0);
@@ -247,9 +250,11 @@ void Test4()
 	int8 mSensor = isOnLight(4);
     int8 mBSensor = isOnLight(5);
     
+    
+    
     if (((!tLSensor && !tRSensor)))
     {
-		writeCompare(85,85); //Go straight
+		writeCompare(78,78); //Go straight
 		CyDelay(100);
     }
     else if (((tLSensor && tRSensor && mLSensor && mRSensor)))
@@ -259,30 +264,31 @@ void Test4()
     } 
     else if (tLSensor && !tRSensor && mLSensor && mRSensor) 
     {
-		writeCompare(89,135); //Turn right a bit
-		CyDelay(10);
+		writeCompare(70,78); //Turn right a bit
+		//CyDelay(5);
 	} 
     else if (!tLSensor && tRSensor && mLSensor && mRSensor)
     {
-		writeCompare(135,89); //Turn left a bit
-		CyDelay(10);
+		writeCompare(78,70); //Turn left a bit
+		//CyDelay(5);
 	}  
     else if (!mLSensor) {
         while (tLSensor) 
         {
             tLSensor = isOnLight(0);
-            writeCompare(170,65); //Turn left
+            writeCompare(170,83); //Turn left
         }
-	} else if (!mRSensor) {
+	} 
+    else if (!mRSensor) {
         while (tRSensor ) 
         {
             tRSensor = isOnLight(1);
-            writeCompare(65,170); //Turn left
+            writeCompare(83,170); //Turn right
         }
     }
     else {
 		writeCompare(127,127);
-		CyDelay(1000);
+		CyDelay(100);
     }
   
    
@@ -330,7 +336,6 @@ void Test4()
 		writeCompare(127,127);
 		CyDelay(1000);
     }
-
             
     */
     
