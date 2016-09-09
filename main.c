@@ -23,11 +23,9 @@
 #include "defines.h"
 #include "vars.h"
 //* ========================================
-void Test1();
-void Test2();
-void Test3();
-void Test4();
-void Test5();
+void pacMan();
+void opticalStraight();
+void readBattery();
 void writeCompare(int P1, int P2);
 void usbPutString(char *s);
 void usbPutChar(char c);
@@ -41,22 +39,6 @@ CY_ISR(isrRF_RX)
     USBUART_PutChar(c);
 }
 
-int isOnLight(int8 numSensor)
-{
-    int32 ADC;
-    int16 i;
-    for(i = 0; i < 58; i++)
-    {
-        while(!ADC_IsEndConversion(0)){}
-        ADC = ADC_CountsTo_mVolts(ADC_GetResult16(numSensor));
-        if(ADC > 1000)
-        {
-            return 1;
-        }
-    }
-    return 0;
-}
-
 int main()
 {
 
@@ -68,7 +50,10 @@ int main()
     isrRF_RX_StartEx(isrRF_RX);
     ADC_Start();
     ADC_StartConvert();
-    
+    PWM_1_Start();
+    PWM_2_Start();
+    QuadDec_M1_Start();
+    QuadDec_M2_Start();
 
 // -----USB SETUP -----------------    
  /*
@@ -84,43 +69,26 @@ int main()
     for(;;)
     {
 		//Get switch information
-		uint8 sw1 = DB0_Read();
-        uint8 sw2 = DB1_Read();
-        uint8 sw3 = DB2_Read();
+		uint8 sw1 = !DB0_Read();
+        uint8 sw2 = DB2_Read();
+        uint8 sw3 = DB1_Read();
         
-        PWM_1_Start();
-        PWM_2_Start();
-       
-       
 		//Choose mode depending on switch position
-		
-		//Open loop-straight line test
-		if (sw1 == 0 && sw2 == 0 && sw3 == 1) 
+		if (!sw1 && !sw2 && !sw3)
 		{
-			Test1();
+			pacMan();
 		}
-		//Straight line-with curve test
-		else if (sw1 == 0 && sw2 == 1 && sw3 == 0) 
+        else if (sw1 && sw2 && sw3)
 		{
-			Test2();
-		}
-		//Curve tracking test
-		else if (sw1 == 0 && sw2 == 1 && sw3 == 1)
-		{
-			Test3();
-		}
-		//Turn 90degrees test
-		else if (sw1 == 1 && sw2 == 0 && sw3 == 0)
-		{
-			Test4();
+			opticalStraight();
 		}
 		//ADC Battery read test
-		else if (sw1 == 1 && sw2 == 0 && sw3 == 1)
+		else if (sw1 && !sw2 && sw3)
 		{
-			Test5();
+			readBattery();
 		}
 		//RF recieve test
-		else if (sw1 == 1 && sw2 == 1 && sw3 == 0)
+		else if (sw1 && sw2 && !sw3)
 		{
             writeCompare(127,127);
 			handle_usb();
@@ -149,140 +117,64 @@ int main()
     }   
 }
 
-
 //* ========================================
-//Open loop-straight line test
-void Test1()
+//Calculates the sensors' status
+void computeSensor(uint8 start, uint8 end)
 {
-    int16 ADC_S1 = ADC_GetResult16(0) / 0.85;
-	int16 ADC_S2 = ADC_GetResult16(1) / 0.85;
-	
-	int8 tLSensor = (ADC_S1 / 1000) % 10;
-	int8 tRSensor = (ADC_S2 / 1000) % 10;
-    
-    if (tLSensor >= 2) {
-		writeCompare(89,89);
-		CyDelay(50);
-	} else {
-        writeCompare(127,127);
+    int32 ADC[6];
+    uint8 j;
+    uint8 i;
+    for(i = start; i <= end; i++)
+    {
+        sensors[i] = 0;
+    }
+    for(i = 0; i < 55; i++)
+    {
+        while(!ADC_IsEndConversion(0)){}
+        for(j = start; j <= end; j++)
+        {
+            ADC[j] = ADC_CountsTo_mVolts(ADC_GetResult16(j));
+            if(ADC[j] > 1000)
+            {
+                sensors[j] = 1;
+            }
+        }
     }
 }
-//* ========================================
-//Straight line-with curve test
-void Test2()
+
+void pacMan()
 {
-    int8 tLSensor = isOnLight(0);
-	int8 tRSensor = isOnLight(1);
-    
-    
-	//Get sensor results
-	/*int16 ADC_S1 = ADC_GetResult16(0) / 0.85;
-	int16 ADC_S2 = ADC_GetResult16(1) / 0.85;
-    int16 ADC_S5 = ADC_GetResult16(4) / 0.85;
-	
-	int8 tLSensor = (ADC_S1 / 1000) % 10;
-	int8 tRSensor = (ADC_S2 / 1000) % 10;
-    int8 mSensor = (ADC_S5 / 1000) % 10;
-
-	if (tLSensor >= 1 && tRSensor <1) {
-		writeCompare(89,135);
-		CyDelay(80);
-        writeCompare(75,75);
-        CyDelay(80);
-	} 
-    else if (tRSensor >= 1 && tLSensor <1) {
-		writeCompare(135,89);
-		CyDelay(80);
-        writeCompare(75,75);
-        CyDelay(80);
-	} 
-    else if (tLSensor < 1 && tRSensor <1){
-		writeCompare(75,75);
-		CyDelay(100);
-	}
-	
-	else{
-        writeCompare(127,127);
-		CyDelay(100);
-	}*/
-
-}
-//* ========================================
-//Curve tracking test
-void Test3()
-{
-	//Get sensor results
-	int16 ADC_S1 = ADC_GetResult16(0) / 0.85;
-	int16 ADC_S2 = ADC_GetResult16(1) / 0.85;
-    int16 ADC_S5 = ADC_GetResult16(4) / 0.85;
-	
-	int8 tLSensor = (ADC_S1 / 1000) % 10;
-	int8 tRSensor = (ADC_S2 / 1000) % 10;
-    int8 mSensor = (ADC_S5 / 1000) % 10;
-
-	if (tLSensor >= 2 && tRSensor <=1) {
-		writeCompare(80,127);
-		CyDelay(50);
-
-	} 
-    else if (tRSensor >= 2 && tLSensor <=1) {
-		writeCompare(127,80);
-		CyDelay(50);
-	} 
-    else if (tLSensor <=1 && tRSensor <=1){
-		writeCompare(80,80);
-		CyDelay(50);
-	}
-	
-	else{
-        writeCompare(127,127);
-		CyDelay(50);
-	}
-}
-//* ========================================
-//Turn 90degrees test
-void Test4()
-{
-    int8 tLSensor = isOnLight(0);
-	int8 tRSensor = isOnLight(1);
-	int8 mLSensor = isOnLight(2);
-	int8 mRSensor = isOnLight(3);
-	int8 mSensor = isOnLight(4);
-    int8 mBSensor = isOnLight(5);
-    
-    
-    
-    if (((!tLSensor && !tRSensor)))
+    computeSensor(0,5);
+    if (((!sensors[FL] && !sensors[FR])))
     {
 		writeCompare(78,78); //Go straight
-		CyDelay(100);
     }
-    else if (((tLSensor && tRSensor && mLSensor && mRSensor)))
+    else if (((!sensors[MM] || !sensors[BM]) && (sensors[FL] && sensors[FR] && sensors[ML] && sensors[MR])))
     {
-		writeCompare(89,89); //Go straight
-		CyDelay(100);
+		writeCompare(78,78); //Go straight
     } 
-    else if (tLSensor && !tRSensor && mLSensor && mRSensor) 
+    else if (sensors[FL] && !sensors[FR] && sensors[ML] && sensors[MR]) 
     {
 		writeCompare(70,78); //Turn right a bit
 		//CyDelay(5);
 	} 
-    else if (!tLSensor && tRSensor && mLSensor && mRSensor)
+    else if (!sensors[FL] && sensors[FR] && sensors[ML] && sensors[MR])
     {
 		writeCompare(78,70); //Turn left a bit
 		//CyDelay(5);
 	}  
-    else if (!mLSensor) {
-        while (tLSensor) 
+    else if (!sensors[ML]) {
+        while (sensors[FR]) 
         {
-            tLSensor = isOnLight(0);
+            computeSensor(1,1);
             writeCompare(170,83); //Turn left
         }
 	} 
-    else if (!mRSensor) {
-        while (tRSensor ) 
+    else if (!sensors[MR]) {
+
+        while (sensors[FL]) 
         {
-            tRSensor = isOnLight(1);
+            computeSensor(0,0);
             writeCompare(83,170); //Turn right
         }
     }
@@ -290,62 +182,56 @@ void Test4()
 		writeCompare(127,127);
 		CyDelay(100);
     }
-  
-   
-    /*
-	//Get sensor results
-	int16 ADC_S1 = ADC_GetResult16(0);
-	int16 ADC_S2 = ADC_GetResult16(1);
-	int16 ADC_S3 = ADC_GetResult16(2);
-	int16 ADC_S4 = ADC_GetResult16(3);
-	int16 ADC_S5 = ADC_GetResult16(4);
-    int16 ADC_S6 = ADC_GetResult16(5);
-	
-	int8 tLSensor = (ADC_S1 / 1000) % 10;
-	int8 tRSensor = (ADC_S2 / 1000) % 10;
-	int8 mLSensor = (ADC_S3 / 1000) % 10;
-	int8 mRSensor = (ADC_S4 / 1000) % 10;
-	int8 mSensor = (ADC_S5 / 1000) % 10;
-    int8 mBSensor = (ADC_S6 / 1000) % 10;
-    
-	if (tLSensor <= 1 && tRSensor <= 1 && mSensor <= 1 && mLSensor >= 2 && mRSensor >= 2) {
-		writeCompare(89,89); //Go straight
-		CyDelay(200);
-    } else if (tLSensor >= 2 && tRSensor <= 1 && mSensor <= 1 && mLSensor >= 2 && mRSensor >= 2) {
-		writeCompare(89,135); //Turn right a bit
-		CyDelay(80);
-	} else if (tLSensor <= 1 && tRSensor >= 2 && mSensor <= 1 && mLSensor >= 2 && mRSensor >= 2) {
-		writeCompare(135,89); //Turn left a bit
-		CyDelay(80);
-	} else if (tLSensor >= 2 && tRSensor >= 2 && mSensor <= 1 && mLSensor >= 2 && mRSensor >= 2) {
-		writeCompare(89,89); //Go straight-faster ticks
-		CyDelay(200);
-	} else if (tLSensor >= 2 && tRSensor >= 2 && mLSensor >= 2 && mRSensor <= 1) {
-        while (tLSensor >= 2) {
-            ADC_S1 = ADC_GetResult16(0);
-            tLSensor = (ADC_S1 / 1000) % 10;
-            writeCompare(165,90); //Turn right
-        }
-	} else if (tLSensor >= 2 && tRSensor >= 2 && mLSensor <= 1 && mRSensor >= 2) { 
-        while (tRSensor >= 2) {
-            ADC_S2 = ADC_GetResult16(1);
-            tRSensor = (ADC_S2 / 1000) % 10;
-            writeCompare(90,165); //Turn right
-        }
-    } else {
-		writeCompare(127,127);
-		CyDelay(1000);
-    }
-            
-    */
-    
 	
 }
-
+void opticalStraight()
+{
+    int16 distanceM1, distanceM2, decCounter;
+    
+    writeCompare(127,127);
+    CyDelay(2000);
+    QuadDec_M1_SetCounter(0);
+    decCounter  = 0;
+    while (decCounter >  - (DISTANCE * 11.4) * 1.02){
+        computeSensor(0,5);
+        
+        writeCompare(30,30);
+        /*
+        //sensor shit
+        if (((!sensors[FL] && !sensors[FR])))
+        {
+    		writeCompare(78,78); //Go straight
+    		//CyDelay(100);
+            
+        }
+        else if (((!sensors[MM] || !sensors[BM]) && (sensors[FL] && sensors[FR] && sensors[ML] && sensors[MR])))
+        {
+    		writeCompare(89,89); //Go straight
+    		//CyDelay(100);
+        } 
+        else if (sensors[FL] && !sensors[FR] && sensors[ML] && sensors[MR]) 
+        {
+    		writeCompare(70,78); //Turn right a bit
+    	} 
+        else if (!sensors[FL] && sensors[FR] && sensors[ML] && sensors[MR])
+        {
+    		writeCompare(78,70); //Turn left a bit
+    	}  
+        else {
+    		writeCompare(127,127);
+    		CyDelay(100);
+        }
+        */
+        decCounter  = QuadDec_M1_GetCounter();
+    }
+    
+    
+   
+}
 
 //* ========================================
 //ADC Battery read test
-void Test5()
+void readBattery()
 {
     writeCompare(127,127);
     
@@ -363,6 +249,7 @@ void Test5()
 	usbPutChar(digit4 + 48);
 	usbPutChar(digit5 + 48);
 	usbPutChar('V');
+    usbPutChar('\r');
 	usbPutChar('\n');
 }
 
